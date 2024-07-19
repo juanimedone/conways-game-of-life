@@ -69,7 +69,14 @@ impl Game {
     }
 }
 
-pub async fn start(height: usize, width: usize, cell_size: f32) {
+pub async fn start(height: usize, width: usize, cell_size: f32) -> Result<(), String> {
+    if height == 0 || width == 0 {
+        return Err("Neither height or width can be 0".to_string());
+    }
+    if cell_size <= 0.0 {
+        return Err("Cell size can't be negative or 0".to_string());
+    }
+
     let mut game = Game::new(height, width);
     loop {
         clear_background(BLACK);

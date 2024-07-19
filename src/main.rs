@@ -6,5 +6,7 @@ const WIDTH: usize = 80;
 
 #[macroquad::main("Conway's Game of Life")]
 async fn main() {
-    game::start(HEIGHT, WIDTH, CELL_SIZE).await
+    if let Err(err) = game::start(HEIGHT, WIDTH, CELL_SIZE).await {
+        println!("Error: {}", err)
+    }
 }
