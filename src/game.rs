@@ -4,14 +4,12 @@ struct Game {
     height: usize,
     width: usize,
     cells: Vec<bool>,
-    next_cells: Vec<bool>,
 }
 
 impl Game {
     fn new(height: usize, width: usize) -> Self {
         let cells = (0..height * width).map(|_| rand::random()).collect();
-        let next_cells = vec![false; height * width];
-        Self { height, width, cells, next_cells }
+        Self { height, width, cells }
     }
 
     fn get_index(&self, x: i32, y: i32) -> usize {
@@ -36,20 +34,21 @@ impl Game {
     }
 
     fn update(&mut self) {
+        let mut next_cells = vec![false; self.height * self.width];
         for x in 0..self.width as i32 {
             for y in 0..self.height as i32 {
                 let index = self.get_index(x, y);
                 let cell = self.cells[index];
                 let neighbors = self.count_neighbors(x, y);
 
-                self.next_cells[index] = match (cell, neighbors) {
+                next_cells[index] = match (cell, neighbors) {
                     (true, 2) | (true, 3) => true,
                     (false, 3) => true,
                     _ => false,
                 };
             }
         }
-        std::mem::swap(&mut self.cells, &mut self.next_cells);
+        self.cells = next_cells
     }
 
     fn draw(&self, cell_size: f32) {
