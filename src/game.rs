@@ -1,5 +1,6 @@
 use macroquad::{color::{BLACK, WHITE}, shapes::draw_rectangle, window::{clear_background, next_frame}};
 
+/// Represents the state of the Game of Life.
 struct Game {
     height: usize,
     width: usize,
@@ -7,15 +8,45 @@ struct Game {
 }
 
 impl Game {
+    /// Creates a new Game of Life with random initial state.
+    ///
+    /// # Arguments
+    ///
+    /// * `height` - The height of the game grid.
+    /// * `width` - The width of the game grid.
+    ///
+    /// # Returns
+    ///
+    /// A new `Game` instance.
     fn new(height: usize, width: usize) -> Self {
         let cells = (0..height * width).map(|_| rand::random()).collect();
         Self { height, width, cells }
     }
 
+    /// Gets the index in the cells vector for the given coordinates.
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - The x coordinate.
+    /// * `y` - The y coordinate.
+    ///
+    /// # Returns
+    ///
+    /// The index in the cells vector.
     fn get_index(&self, x: i32, y: i32) -> usize {
         y as usize * self.width + x as usize
     }
 
+    /// Counts the number of alive neighbors for the given cell.
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - The x coordinate of the cell.
+    /// * `y` - The y coordinate of the cell.
+    ///
+    /// # Returns
+    ///
+    /// The number of alive neighbors.
     fn count_neighbors(&self, x: i32, y: i32) -> usize {
         let mut count = 0;
         for dx in -1..=1 {
@@ -40,6 +71,7 @@ impl Game {
         count
     }
 
+    /// Updates the game state to the next generation.
     fn update(&mut self) {
         let mut next_cells = vec![false; self.height * self.width];
         for x in 0..self.width as i32 {
@@ -58,6 +90,11 @@ impl Game {
         self.cells = next_cells
     }
 
+    /// Draws the current game state.
+    ///
+    /// # Arguments
+    ///
+    /// * `cell_size` - The size of each cell.
     fn draw(&self, cell_size: f32) {
         for x in 0..self.width {
             for y in 0..self.height {
@@ -76,6 +113,17 @@ impl Game {
     }
 }
 
+/// Validates the start parameters for the game.
+///
+/// # Arguments
+///
+/// * `height` - The height of the game grid.
+/// * `width` - The width of the game grid.
+/// * `cell_size` - The size of each cell.
+///
+/// # Returns
+///
+/// `Ok(())` if the parameters are valid, otherwise an error message.
 fn validate_start_parameters(height: usize, width: usize, cell_size: f32) -> Result<(), String> {
     if height == 0 || width == 0 {
         return Err("Neither height nor width can be 0".to_string());
@@ -86,6 +134,17 @@ fn validate_start_parameters(height: usize, width: usize, cell_size: f32) -> Res
     Ok(())
 }
 
+/// Starts the Game of Life.
+///
+/// # Arguments
+///
+/// * `height` - The height of the game grid.
+/// * `width` - The width of the game grid.
+/// * `cell_size` - The size of each cell.
+///
+/// # Returns
+///
+/// A message if an error ocurrs while validating the parameters, otherwise it loops infinitely.
 pub async fn start(height: usize, width: usize, cell_size: f32) -> Result<(), String> {
     validate_start_parameters(height, width, cell_size)?;
 
