@@ -1,23 +1,21 @@
 use macroquad::{color::{BLACK, WHITE}, shapes::draw_rectangle, window::{clear_background, next_frame}};
 
-const CELL_SIZE: f32 = 10.0;
-const WIDTH: usize = 80;
-const HEIGHT: usize = 60;
-
 struct Game {
+    height: usize,
+    width: usize,
     cells: Vec<bool>,
     next_cells: Vec<bool>,
 }
 
 impl Game {
-    fn new() -> Self {
-        let cells = (0..WIDTH * HEIGHT).map(|_| rand::random()).collect();
-        let next_cells = vec![false; WIDTH * HEIGHT];
-        Self { cells, next_cells }
+    fn new(height: usize, width: usize) -> Self {
+        let cells = (0..height * width).map(|_| rand::random()).collect();
+        let next_cells = vec![false; height * width];
+        Self { height, width, cells, next_cells }
     }
 
     fn get_index(&self, x: i32, y: i32) -> usize {
-        ((y as usize) % HEIGHT) * WIDTH + ((x as usize) % WIDTH)
+        ((y as usize) % self.height) * self.width + ((x as usize) % self.width)
     }
 
     fn count_neighbors(&self, x: i32, y: i32) -> usize {
@@ -38,8 +36,8 @@ impl Game {
     }
 
     fn update(&mut self) {
-        for y in 0..HEIGHT as i32 {
-            for x in 0..WIDTH as i32 {
+        for x in 0..self.width as i32 {
+            for y in 0..self.height as i32 {
                 let index = self.get_index(x, y);
                 let cell = self.cells[index];
                 let neighbors = self.count_neighbors(x, y);
@@ -54,16 +52,16 @@ impl Game {
         std::mem::swap(&mut self.cells, &mut self.next_cells);
     }
 
-    fn draw(&self) {
-        for y in 0..HEIGHT {
-            for x in 0..WIDTH {
-                let index = y * WIDTH + x;
+    fn draw(&self, cell_size: f32) {
+        for x in 0..self.width {
+            for y in 0..self.height {
+                let index = y * self.width + x;
                 if self.cells[index] {
                     draw_rectangle(
-                        x as f32 * CELL_SIZE,
-                        y as f32 * CELL_SIZE,
-                        CELL_SIZE,
-                        CELL_SIZE,
+                        x as f32 * cell_size,
+                        y as f32 * cell_size,
+                        cell_size,
+                        cell_size,
                         WHITE,
                     );
                 }
@@ -72,13 +70,13 @@ impl Game {
     }
 }
 
-pub async fn start() {
-    let mut game = Game::new();
+pub async fn start(height: usize, width: usize, cell_size: f32) {
+    let mut game = Game::new(height, width);
     loop {
         clear_background(BLACK);
 
         game.update();
-        game.draw();
+        game.draw(cell_size);
 
         next_frame().await
     }
