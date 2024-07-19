@@ -1,4 +1,8 @@
-use macroquad::{color::{BLACK, WHITE}, shapes::draw_rectangle, window::{clear_background, next_frame}};
+use macroquad::{
+    color::{BLACK, WHITE},
+    shapes::draw_rectangle,
+    window::{clear_background, next_frame},
+};
 
 /// Represents the state of the Game of Life.
 struct Game {
@@ -20,7 +24,11 @@ impl Game {
     /// A new `Game` instance.
     fn new(height: usize, width: usize) -> Self {
         let cells = (0..height * width).map(|_| rand::random()).collect();
-        Self { height, width, cells }
+        Self {
+            height,
+            width,
+            cells,
+        }
     }
 
     /// Gets the index in the cells vector for the given coordinates.
@@ -51,15 +59,17 @@ impl Game {
         let mut count = 0;
         for dx in -1..=1 {
             let nx = x + dx;
-            if nx < 0 || nx >= self.width as i32 {      // checks if neighbor's x is out of bounds
+            if nx < 0 || nx >= self.width as i32 {
+                // checks if neighbor's x is out of bounds
                 continue;
             }
             for dy in -1..=1 {
                 let ny = y + dy;
-                if ny < 0 || ny >= self.height as i32 {     // checks if neighbor's y is out of bounds
+                if ny < 0 || ny >= self.height as i32 {
+                    // checks if neighbor's y is out of bounds
                     continue;
                 }
-                if nx == x && ny == y { 
+                if nx == x && ny == y {
                     continue;
                 }
                 let index = self.get_index(nx, ny);
@@ -80,11 +90,7 @@ impl Game {
                 let cell = self.cells[index];
                 let neighbors = self.count_neighbors(x, y);
 
-                next_cells[index] = match (cell, neighbors) {
-                    (true, 2) | (true, 3) => true,
-                    (false, 3) => true,
-                    _ => false,
-                };
+                next_cells[index] = matches!((cell, neighbors), (true, 2) | (true, 3) | (false, 3));
             }
         }
         self.cells = next_cells
@@ -162,12 +168,12 @@ pub async fn start(height: usize, width: usize, cell_size: f32) -> Result<(), St
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_valid_start_parameters() {
         assert!(validate_start_parameters(60, 80, 10.0).is_ok())
     }
-    
+
     #[test]
     fn test_invalid_start_parameters() {
         match validate_start_parameters(0, 80, 10.0) {
@@ -202,7 +208,8 @@ mod tests {
         assert_eq!(game.get_index(0, 4), 20);
         assert_eq!(game.get_index(4, 4), 24);
     }
-    
+
+    #[rustfmt::skip]
     #[test]
     fn test_count_neighbors() {
         let mut game = Game::new(5, 5);
@@ -219,6 +226,7 @@ mod tests {
         assert_eq!(game.count_neighbors(4, 4), 3);
     }
 
+    #[rustfmt::skip]
     #[test]
     fn test_update() {
         let mut game = Game::new(5, 5);
@@ -239,5 +247,4 @@ mod tests {
         ];
         assert_eq!(game.cells, expected);
     }
-
 }
