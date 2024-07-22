@@ -8,7 +8,7 @@ use macroquad::{
 struct Game {
     height: usize,
     width: usize,
-    cells: Vec<bool>,
+    cells: Vec<Vec<bool>>,
 }
 
 impl Game {
@@ -23,26 +23,14 @@ impl Game {
     ///
     /// A new `Game` instance.
     fn new(height: usize, width: usize) -> Self {
-        let cells = (0..height * width).map(|_| rand::random()).collect();
+        let cells = (0..width)
+            .map(|_| (0..height).map(|_| rand::random()).collect())
+            .collect();
         Self {
             height,
             width,
             cells,
         }
-    }
-
-    /// Gets the index in the cells vector for the given coordinates.
-    ///
-    /// # Arguments
-    ///
-    /// * `x` - The x coordinate.
-    /// * `y` - The y coordinate.
-    ///
-    /// # Returns
-    ///
-    /// The index in the cells vector.
-    fn get_index(&self, x: i32, y: i32) -> usize {
-        y as usize * self.width + x as usize
     }
 
     /// Counts the number of alive neighbors for the given cell.
@@ -72,8 +60,7 @@ impl Game {
                 if nx == x && ny == y {
                     continue;
                 }
-                let index = self.get_index(nx, ny);
-                if self.cells[index] {
+                if self.cells[nx as usize][ny as usize] {
                     count += 1;
                 }
             }
@@ -83,17 +70,16 @@ impl Game {
 
     /// Updates the game state to the next generation.
     fn update(&mut self) {
-        let mut next_cells = vec![false; self.height * self.width];
-        for x in 0..self.width as i32 {
-            for y in 0..self.height as i32 {
-                let index = self.get_index(x, y);
-                let cell = self.cells[index];
-                let neighbors = self.count_neighbors(x, y);
+        let mut next_cells = vec![vec![false; self.height]; self.width];
+        for x in 0..next_cells.len() {
+            for y in 0..next_cells[0].len() {
+                let cell = self.cells[x][y];
+                let neighbors = self.count_neighbors(x as i32, y as i32);
 
-                next_cells[index] = matches!((cell, neighbors), (true, 2) | (true, 3) | (false, 3));
+                next_cells[x][y] = matches!((cell, neighbors), (true, 2) | (true, 3) | (false, 3));
             }
         }
-        self.cells = next_cells
+        self.cells = next_cells;
     }
 
     /// Draws the current game state.
@@ -104,8 +90,7 @@ impl Game {
     fn draw(&self, cell_size: f32) {
         for x in 0..self.width {
             for y in 0..self.height {
-                let index = y * self.width + x;
-                if self.cells[index] {
+                if self.cells[x][y] {
                     draw_rectangle(
                         x as f32 * cell_size,
                         y as f32 * cell_size,
@@ -197,16 +182,8 @@ mod tests {
     #[test]
     fn test_create_new_game() {
         let game = Game::new(5, 6);
-        assert_eq!(game.cells.len(), 30)
-    }
-
-    #[test]
-    fn test_get_index() {
-        let game = Game::new(5, 5);
-        assert_eq!(game.get_index(0, 0), 0);
-        assert_eq!(game.get_index(4, 0), 4);
-        assert_eq!(game.get_index(0, 4), 20);
-        assert_eq!(game.get_index(4, 4), 24);
+        assert_eq!(game.cells.len(), 6);
+        assert_eq!(game.cells[0].len(), 5);
     }
 
     #[rustfmt::skip]
@@ -214,11 +191,11 @@ mod tests {
     fn test_count_neighbors() {
         let mut game = Game::new(5, 5);
         game.cells = vec![
-            false, true,  false, true,  false,
-            true,  true,  true,  false, true,
-            false, false, true,  false, false,
-            true,  false, false, true,  true,
-            false, true,  false, true,  false,
+            vec![false, true, false, true, false],
+            vec![true, true, true, false, true],
+            vec![false, false, true, false, false],
+            vec![true, false, false, true, true],
+            vec![false, true, false, true, false],
         ];
         assert_eq!(game.count_neighbors(0, 0), 3);
         assert_eq!(game.count_neighbors(0, 4), 2);
@@ -231,19 +208,19 @@ mod tests {
     fn test_update() {
         let mut game = Game::new(5, 5);
         game.cells = vec![
-            false, true,  false, true,  false,
-            true,  true,  true,  false, true,
-            false, false, true,  false, false,
-            true,  false, false, true,  true,
-            false, true,  false, true,  false,
+            vec![false, true, false, true, false],
+            vec![true, true, true, false, true],
+            vec![false, false, true, false, false],
+            vec![true, false, false, true, true],
+            vec![false, true, false, true, false],
         ];
         game.update();
         let expected = vec![
-            true,  true,  false,  true,  false,
-            true,  false, false, false, false,
-            true,  false, true, false, true,
-            false, true, false, true, true,
-            false, false, true, true, true,
+            vec![true, true, false, true, false],
+            vec![true, false, false, false, false],
+            vec![true, false, true, false, true],
+            vec![false, true, false, true, true],
+            vec![false, false, true, true, true],
         ];
         assert_eq!(game.cells, expected);
     }
