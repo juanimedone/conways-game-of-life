@@ -6,16 +6,17 @@ use macroquad::{
 
 /// Represents the state of the Game of Life.
 pub struct Game {
-    height: usize,
-    width: usize,
-    cell_size: f32,
+    cell_size: usize,
     cells: Vec<Vec<bool>>,
 }
 
 impl Game {
     /// Creates a new Game of Life with a random initial state.
     ///
-    /// # Arguments
+    /// The function will adjust the number of rows and columns based on the given
+    /// `cell_size` and will initialize the cells with random boolean values.
+    /// 
+    /// # Arguments 
     ///
     /// * `height` - The height of the game grid.
     /// * `width` - The width of the game grid.
@@ -24,21 +25,16 @@ impl Game {
     /// # Returns
     ///
     /// `Ok(Self)` if the parameters are valid, containing the new `Game` instance,
-    /// or `Err(String)` with an error message if the parameters are invalid.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if `height` or `width` is 0, or if
-    /// `cell_size` is less than or equal to 0.
-    pub fn new(height: usize, width: usize, cell_size: f32) -> Result<Self, String> {
+    /// or `Err(String)` with an error message if any of the parameters is invalid.
+    pub fn new(height: usize, width: usize, cell_size: usize) -> Result<Self, String> {
         Self::validate_start_parameters(height, width, cell_size)?;
 
-        let cells = (0..width)
-            .map(|_| (0..height).map(|_| rand::random()).collect())
+        let nrows = height / cell_size;
+        let ncols = width / cell_size;
+        let cells = (0..ncols)
+            .map(|_| (0..nrows).map(|_| rand::random()).collect())
             .collect();
         Ok(Self {
-            height,
-            width,
             cell_size,
             cells,
         })
@@ -55,16 +51,17 @@ impl Game {
     /// # Returns
     ///
     /// `Ok(())` if the parameters are valid, otherwise an error message.
+    /// 
+    /// # Errors
+    ///
+    /// This function will return an error if `height`, `width` or `cell_size` is 0
     fn validate_start_parameters(
         height: usize,
         width: usize,
-        cell_size: f32,
+        cell_size: usize,
     ) -> Result<(), String> {
-        if height == 0 || width == 0 {
-            return Err("Neither height nor width can be 0".to_string());
-        }
-        if cell_size <= 0.0 {
-            return Err("Cell size can't be negative or 0".to_string());
+        if height == 0 || width == 0 || cell_size == 0 {
+            return Err("Neither height, width nor cell size can be 0".to_string());
         }
         Ok(())
     }
@@ -97,13 +94,13 @@ impl Game {
         let mut count = 0;
         for dx in -1..=1 {
             let nx = x + dx;
-            if nx < 0 || nx >= self.width as i32 {
+            if nx < 0 || nx >= self.cells.len() as i32 {
                 // checks if neighbor's x is out of bounds
                 continue;
             }
             for dy in -1..=1 {
                 let ny = y + dy;
-                if ny < 0 || ny >= self.height as i32 {
+                if ny < 0 || ny >= self.cells[0].len() as i32 {
                     // checks if neighbor's y is out of bounds
                     continue;
                 }
@@ -120,7 +117,10 @@ impl Game {
 
     /// Updates the game state to the next generation.
     fn update(&mut self) {
-        let mut next_cells = vec![vec![false; self.height]; self.width];
+        let nrows = self.cells.len();
+        let ncols = self.cells[0].len();
+        let mut next_cells = vec![vec![false; ncols]; nrows];
+        
         for x in 0..next_cells.len() {
             for y in 0..next_cells[0].len() {
                 let cell = self.cells[x][y];
@@ -137,14 +137,14 @@ impl Game {
     /// This function renders the cells of the game onto the screen using the cell size
     /// to determine their position and dimensions.
     fn draw(&self) {
-        for x in 0..self.width {
-            for y in 0..self.height {
+        for x in 0..self.cells.len() {
+            for y in 0..self.cells[0].len() {
                 if self.cells[x][y] {
                     draw_rectangle(
-                        x as f32 * self.cell_size,
-                        y as f32 * self.cell_size,
-                        self.cell_size,
-                        self.cell_size,
+                        (x * self.cell_size) as f32,
+                        (y * self.cell_size) as f32,
+                        self.cell_size as f32,
+                        self.cell_size as f32,
                         WHITE,
                     );
                 }
@@ -159,40 +159,36 @@ mod tests {
 
     #[test]
     fn test_valid_start_parameters() {
-        assert!(Game::validate_start_parameters(60, 80, 10.0).is_ok())
+        assert!(Game::validate_start_parameters(600, 800, 10).is_ok())
     }
 
     #[test]
     fn test_invalid_start_parameters() {
-        match Game::validate_start_parameters(0, 80, 10.0) {
-            Err(e) => assert_eq!(e, "Neither height nor width can be 0"),
+        match Game::validate_start_parameters(0, 800, 10) {
+            Err(e) => assert_eq!(e, "Neither height, width nor cell size can be 0"),
             _ => panic!("Expected an error"),
         }
-        match Game::validate_start_parameters(60, 0, 10.0) {
-            Err(e) => assert_eq!(e, "Neither height nor width can be 0"),
+        match Game::validate_start_parameters(600, 0, 10) {
+            Err(e) => assert_eq!(e, "Neither height, width nor cell size can be 0"),
             _ => panic!("Expected an error"),
         }
-        match Game::validate_start_parameters(60, 80, 0.0) {
-            Err(e) => assert_eq!(e, "Cell size can't be negative or 0"),
-            _ => panic!("Expected an error"),
-        }
-        match Game::validate_start_parameters(60, 80, -1.0) {
-            Err(e) => assert_eq!(e, "Cell size can't be negative or 0"),
+        match Game::validate_start_parameters(600, 800, 0) {
+            Err(e) => assert_eq!(e, "Neither height, width nor cell size can be 0"),
             _ => panic!("Expected an error"),
         }
     }
 
     #[test]
     fn test_create_new_valid_game() {
-        let game = Game::new(5, 6, 1.0).unwrap();
-        assert_eq!(game.cells.len(), 6);
-        assert_eq!(game.cells[0].len(), 5);
+        let game = Game::new(600, 800, 10).unwrap();
+        assert_eq!(game.cells.len(), 80);
+        assert_eq!(game.cells[0].len(), 60);
     }
 
     #[rustfmt::skip]
     #[test]
     fn test_count_neighbors() {
-        let mut game = Game::new(5, 5, 1.0).unwrap();
+        let mut game = Game::new(5, 5, 1).unwrap();
         game.cells = vec![
             vec![false, true, false, true, false],
             vec![true, true, true, false, true],
@@ -209,7 +205,7 @@ mod tests {
     #[rustfmt::skip]
     #[test]
     fn test_update() {
-        let mut game = Game::new(5, 5, 1.0).unwrap();
+        let mut game = Game::new(5, 5, 1).unwrap();
         game.cells = vec![
             vec![false, true, false, true, false],
             vec![true, true, true, false, true],

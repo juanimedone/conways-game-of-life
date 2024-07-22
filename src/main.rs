@@ -1,8 +1,8 @@
 use conways_game_of_life::game::Game;
 
-const CELL_SIZE: f32 = 10.0;
-const HEIGHT: usize = 60;
-const WIDTH: usize = 80;
+const CELL_SIZE: usize = 10;
+const HEIGHT: usize = 600;
+const WIDTH: usize = 800;
 
 /// The entry point of the Conway's Game of Life.
 ///
