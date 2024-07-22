@@ -1,4 +1,4 @@
-use conways_game_of_life::game;
+use conways_game_of_life::game::Game;
 
 const CELL_SIZE: f32 = 10.0;
 const HEIGHT: usize = 60;
@@ -16,7 +16,8 @@ const WIDTH: usize = 80;
 /// * `WIDTH` - The width of the game grid.
 #[macroquad::main("Conway's Game of Life")]
 async fn main() {
-    if let Err(err) = game::start(HEIGHT, WIDTH, CELL_SIZE).await {
-        println!("Error: {}", err)
+    match Game::new(HEIGHT, WIDTH, CELL_SIZE) {
+        Ok(mut game) => game.start().await,
+        Err(e) => println!("Error: {}", e),
     }
 }
