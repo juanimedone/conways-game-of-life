@@ -4,6 +4,8 @@ const DEFAULT_SPEED: f32 = 10.0;
 
 /// Represents the state of the Game of Life.
 pub struct Game {
+    ncols: usize,
+    nrows: usize,
     cell_size: usize,
     cells: Vec<Vec<bool>>,
 }
@@ -27,10 +29,15 @@ impl Game {
     pub fn new(height: usize, width: usize, cell_size: usize) -> Result<Self, String> {
         Self::validate_start_parameters(height, width, cell_size)?;
 
-        let nrows = height / cell_size;
         let ncols = width / cell_size;
+        let nrows = height / cell_size;
         let cells = vec![vec![false; nrows]; ncols];
-        Ok(Self { cell_size, cells })
+        Ok(Self {
+            ncols,
+            nrows,
+            cell_size,
+            cells,
+        })
     }
 
     /// Validates the start parameters for the game.
@@ -196,7 +203,7 @@ impl Game {
         let x = (mouse_pos.0 / self.cell_size as f32) as usize;
         let y = (mouse_pos.1 / self.cell_size as f32) as usize;
 
-        if x < self.cells.len() && y < self.cells[0].len() {
+        if x < self.ncols && y < self.nrows {
             self.cells[x][y] = !self.cells[x][y];
         }
     }
@@ -205,10 +212,8 @@ impl Game {
     ///
     /// This function sets each cell in the grid to a random state (alive or dead).
     fn randomize(&mut self) {
-        let nrows = self.cells.len();
-        let ncols = self.cells[0].len();
-        self.cells = (0..nrows)
-            .map(|_| (0..ncols).map(|_| ::rand::random()).collect())
+        self.cells = (0..self.ncols)
+            .map(|_| (0..self.nrows).map(|_| ::rand::random()).collect())
             .collect();
     }
 
@@ -225,10 +230,10 @@ impl Game {
             *paused = !*paused;
         }
         if is_key_pressed(KeyCode::Up) {
-            *speed *= 1.5;
+            *speed = (*speed * 1.5).min(1000.0);
         }
         if is_key_pressed(KeyCode::Down) {
-            *speed /= 1.5;
+            *speed = (*speed / 1.5).max(0.1);
         }
     }
 
@@ -237,12 +242,11 @@ impl Game {
     /// This function calculates the next state of the game based on the current state
     /// and updates the cells accordingly.
     fn update(&mut self) {
-        let nrows = self.cells.len();
-        let ncols = self.cells[0].len();
-        let mut next_cells = vec![vec![false; ncols]; nrows];
+        let mut next_cells = vec![vec![false; self.nrows]; self.ncols];
 
-        for x in 0..next_cells.len() {
-            for y in 0..next_cells[0].len() {
+        #[allow(clippy::needless_range_loop)] // this way is clearer than how Clippy suggests
+        for x in 0..self.ncols {
+            for y in 0..self.nrows {
                 let cell = self.cells[x][y];
                 let neighbors = self.count_neighbors(x as i32, y as i32);
 
@@ -266,13 +270,13 @@ impl Game {
         let mut count = 0;
         for dx in -1..=1 {
             let nx = x + dx;
-            if nx < 0 || nx >= self.cells.len() as i32 {
+            if nx < 0 || nx >= self.ncols as i32 {
                 // checks if neighbor's x is out of bounds
                 continue;
             }
             for dy in -1..=1 {
                 let ny = y + dy;
-                if ny < 0 || ny >= self.cells[0].len() as i32 {
+                if ny < 0 || ny >= self.nrows as i32 {
                     // checks if neighbor's y is out of bounds
                     continue;
                 }
@@ -292,15 +296,15 @@ impl Game {
     /// This function renders the grid lines onto the screen to visually separate the cells.
     /// The lines are drawn based on the cell size and the dimensions of the game grid.
     fn draw_grid(&self) {
-        let width = self.cells.len() * self.cell_size;
-        let height = self.cells[0].len() * self.cell_size;
+        let width = self.ncols * self.cell_size;
+        let height = self.nrows * self.cell_size;
 
-        for x in 0..=self.cells.len() {
+        for x in 0..=self.ncols {
             let x_pos = (x * self.cell_size) as f32;
             draw_line(x_pos, 0.0, x_pos, height as f32, 1.0, GRAY);
         }
 
-        for y in 0..=self.cells[0].len() {
+        for y in 0..=self.nrows {
             let y_pos = (y * self.cell_size) as f32;
             draw_line(0.0, y_pos, width as f32, y_pos, 1.0, GRAY);
         }
@@ -311,8 +315,8 @@ impl Game {
     /// This function renders the cells of the game onto the screen using the cell size
     /// to determine their position and dimensions. Only alive cells are drawn.
     fn draw_cells(&self) {
-        for x in 0..self.cells.len() {
-            for y in 0..self.cells[0].len() {
+        for x in 0..self.ncols {
+            for y in 0..self.nrows {
                 if self.cells[x][y] {
                     draw_rectangle(
                         (x * self.cell_size) as f32,
