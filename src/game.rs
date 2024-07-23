@@ -187,6 +187,10 @@ impl Game {
         }
     }
 
+    /// Toggles the state of the cell at the mouse position.
+    ///
+    /// This function retrieves the mouse position and toggles the state of the cell
+    /// at that position from alive to dead or vice versa.
     fn toggle_cell_state(&mut self) {
         let mouse_pos = mouse_position();
         let x = (mouse_pos.0 / self.cell_size as f32) as usize;
@@ -197,6 +201,9 @@ impl Game {
         }
     }
 
+    /// Randomizes the state of all cells in the grid.
+    ///
+    /// This function sets each cell in the grid to a random state (alive or dead).
     fn randomize(&mut self) {
         let nrows = self.cells.len();
         let ncols = self.cells[0].len();
@@ -205,6 +212,14 @@ impl Game {
             .collect();
     }
 
+    /// Checks for key presses to pause/unpause the game and adjust the game speed.
+    ///
+    /// This function handles key presses for pausing the game and changing the game speed.
+    ///
+    /// # Arguments
+    ///
+    /// * `paused` - A mutable reference to the paused (or not paused) state of the game.
+    /// * `speed` - A mutable reference to the speed of the game.
     fn check_keys(paused: &mut bool, speed: &mut f32) {
         if is_key_pressed(KeyCode::Space) {
             *paused = !*paused;
@@ -218,6 +233,9 @@ impl Game {
     }
 
     /// Updates the game state to the next generation.
+    ///
+    /// This function calculates the next state of the game based on the current state
+    /// and updates the cells accordingly.
     fn update(&mut self) {
         let nrows = self.cells.len();
         let ncols = self.cells[0].len();
