@@ -1,6 +1,6 @@
 use macroquad::{
-    color::{BLACK, WHITE},
-    shapes::draw_rectangle,
+    color::{BLACK, GRAY, WHITE},
+    shapes::{draw_line, draw_rectangle},
     window::{clear_background, next_frame},
 };
 
@@ -74,7 +74,8 @@ impl Game {
             clear_background(BLACK);
 
             self.update();
-            self.draw();
+            self.draw_grid();
+            self.draw_cells();
 
             next_frame().await
         }
@@ -132,11 +133,30 @@ impl Game {
         self.cells = next_cells;
     }
 
-    /// Draws the current game state.
+    /// Draws the grid lines for the Game of Life.
+    ///
+    /// This function renders the grid lines onto the screen to visually separate the cells.
+    /// The lines are drawn based on the cell size and the dimensions of the game grid.
+    fn draw_grid(&self) {
+        let width = self.cells.len() * self.cell_size;
+        let height = self.cells[0].len() * self.cell_size;
+
+        for x in 0..=self.cells.len() {
+            let x_pos = (x * self.cell_size) as f32;
+            draw_line(x_pos, 0.0, x_pos, height as f32, 1.0, GRAY);
+        }
+
+        for y in 0..=self.cells[0].len() {
+            let y_pos = (y * self.cell_size) as f32;
+            draw_line(0.0, y_pos, width as f32, y_pos, 1.0, GRAY);
+        }
+    }
+
+    /// Draws the current game state cells.
     ///
     /// This function renders the cells of the game onto the screen using the cell size
-    /// to determine their position and dimensions.
-    fn draw(&self) {
+    /// to determine their position and dimensions. Only alive cells are drawn.
+    fn draw_cells(&self) {
         for x in 0..self.cells.len() {
             for y in 0..self.cells[0].len() {
                 if self.cells[x][y] {
@@ -151,6 +171,7 @@ impl Game {
             }
         }
     }
+
 }
 
 #[cfg(test)]
