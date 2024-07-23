@@ -1,5 +1,7 @@
 use macroquad::prelude::*;
 
+const DEFAULT_SPEED: f32 = 10.0;
+
 /// Represents the state of the Game of Life.
 pub struct Game {
     cell_size: usize,
@@ -7,10 +9,10 @@ pub struct Game {
 }
 
 impl Game {
-    /// Creates a new Game of Life with a random initial state.
+    /// Creates a new Game of Life with all cells initially dead.
     ///
     /// The function will adjust the number of rows and columns based on the given
-    /// `cell_size` and will initialize the cells with random boolean values.
+    /// `cell_size` and will initialize all cells to be dead (false).
     ///
     /// # Arguments
     ///
@@ -27,9 +29,7 @@ impl Game {
 
         let nrows = height / cell_size;
         let ncols = width / cell_size;
-        let cells = (0..ncols)
-            .map(|_| (0..nrows).map(|_| ::rand::random()).collect())
-            .collect();
+        let cells = vec![vec![false; nrows]; ncols];
         Ok(Self { cell_size, cells })
     }
 
@@ -57,6 +57,47 @@ impl Game {
             return Err("Neither height, width nor cell size can be 0".to_string());
         }
         Ok(())
+    }
+
+    /// Runs the Game of Life.
+    ///
+    /// This function displays the start menu, allows the player to choose the initial
+    /// state of the cells, and then enters an infinite loop to continuously update
+    /// and draw the game state. The game can be paused and unpaused by pressing the
+    /// Space key. The game speed can be increased by pressing the Up arrow key and
+    /// decreased by pressing the Down arrow key.
+    ///
+    /// The main loop performs the following actions:
+    /// - Checks for key presses to pause/unpause the game and adjust the game speed.
+    /// - Updates the game state if the game is not paused.
+    /// - Draws the game grid and cells.
+    /// - Waits for the next frame to be drawn.
+    ///
+    /// The game speed controls how frequently the game state updates. The `speed` variable is
+    /// multiplied or divided by 1.5 when the Up or Down arrow keys are pressed, respectively.
+    pub async fn run(&mut self) {
+        self.show_menu().await;
+        self.choose_initial_state().await;
+
+        let mut paused = false;
+        let mut speed = DEFAULT_SPEED;
+        let mut update_timer = 0.0;
+        loop {
+            Self::check_keys(&mut paused, &mut speed);
+
+            if !paused {
+                update_timer += get_frame_time();
+                if update_timer >= 1.0 / speed {
+                    self.update();
+                    update_timer = 0.0;
+                }
+            }
+
+            clear_background(BLACK);
+            self.draw_grid();
+            self.draw_cells();
+            next_frame().await;
+        }
     }
 
     /// Displays the start menu.
@@ -104,51 +145,93 @@ impl Game {
         }
     }
 
-    /// Starts the Game of Life.
+    /// Allows the player to choose the initial alive cells through a GUI.
     ///
-    /// This function displays the start menu and then enters an infinite loop to continuously
-    /// update and draw the game state. The game can be paused and unpaused by pressing the
-    /// Space key. The game speed can be increased by pressing the Up arrow key and decreased
-    /// by pressing the Down arrow key.
-    ///
-    /// The main loop performs the following actions:
-    /// - Checks for key presses to pause/unpause the game and adjust the game speed.
-    /// - Updates the game state if the game is not paused.
-    /// - Draws the game grid and cells.
-    /// - Waits for the next frame to be drawn.
-    ///
-    /// The game speed controls how frequently the game state updates. The `speed` variable is
-    /// multiplied or divided by 1.5 when the Up or Down arrow keys are pressed, respectively.
-    pub async fn start(&mut self) {
-        self.show_menu().await;
+    /// This function allows the player to click on cells to toggle their state
+    /// (alive or dead) before starting the game. The player can also randomize
+    /// the initial state by pressing 'R'.
+    async fn choose_initial_state(&mut self) {
+        let mut choosing = true;
 
-        let mut paused = false;
-        let mut speed = 10.0;
-        let mut update_timer = 0.0;
-        loop {
-            if is_key_pressed(KeyCode::Space) {
-                paused = !paused;
-            }
-            if is_key_pressed(KeyCode::Up) {
-                speed *= 1.5;
-            }
-            if is_key_pressed(KeyCode::Down) {
-                speed /= 1.5;
-            }
-
-            if !paused {
-                update_timer += get_frame_time();
-                if update_timer >= 1.0 / speed {
-                    self.update();
-                    update_timer = 0.0;
-                }
-            }
-
+        while choosing {
             clear_background(BLACK);
             self.draw_grid();
             self.draw_cells();
+
+            if is_mouse_button_pressed(MouseButton::Left) {
+                self.toggle_cell_state();
+            }
+            if is_key_pressed(KeyCode::R) {
+                self.randomize();
+            }
+
+            draw_text(
+                "Select alive cells and press Enter to Start",
+                screen_width() / 2.0 - 180.0,
+                screen_height() - 40.0,
+                20.0,
+                WHITE,
+            );
+            draw_text(
+                "Press 'R' to randomize",
+                screen_width() / 2.0 - 100.0,
+                screen_height() - 20.0,
+                20.0,
+                WHITE,
+            );
             next_frame().await;
+
+            if is_key_pressed(KeyCode::Enter) {
+                choosing = false;
+            }
         }
+    }
+
+    fn toggle_cell_state(&mut self) {
+        let mouse_pos = mouse_position();
+        let x = (mouse_pos.0 / self.cell_size as f32) as usize;
+        let y = (mouse_pos.1 / self.cell_size as f32) as usize;
+
+        if x < self.cells.len() && y < self.cells[0].len() {
+            self.cells[x][y] = !self.cells[x][y];
+        }
+    }
+
+    fn randomize(&mut self) {
+        let nrows = self.cells.len();
+        let ncols = self.cells[0].len();
+        self.cells = (0..nrows)
+            .map(|_| (0..ncols).map(|_| ::rand::random()).collect())
+            .collect();
+    }
+
+    fn check_keys(paused: &mut bool, speed: &mut f32) {
+        if is_key_pressed(KeyCode::Space) {
+            *paused = !*paused;
+        }
+        if is_key_pressed(KeyCode::Up) {
+            *speed *= 1.5;
+        }
+        if is_key_pressed(KeyCode::Down) {
+            *speed /= 1.5;
+        }
+    }
+
+    /// Updates the game state to the next generation.
+    fn update(&mut self) {
+        let nrows = self.cells.len();
+        let ncols = self.cells[0].len();
+        let mut next_cells = vec![vec![false; ncols]; nrows];
+
+        for x in 0..next_cells.len() {
+            for y in 0..next_cells[0].len() {
+                let cell = self.cells[x][y];
+                let neighbors = self.count_neighbors(x as i32, y as i32);
+
+                next_cells[x][y] = matches!((cell, neighbors), (true, 2) | (true, 3) | (false, 3));
+            }
+        }
+        self.cells = next_cells;
     }
 
     /// Counts the number of alive neighbors for the given cell.
@@ -184,23 +267,6 @@ impl Game {
             }
         }
         count
-    }
-
-    /// Updates the game state to the next generation.
-    fn update(&mut self) {
-        let nrows = self.cells.len();
-        let ncols = self.cells[0].len();
-        let mut next_cells = vec![vec![false; ncols]; nrows];
-
-        for x in 0..next_cells.len() {
-            for y in 0..next_cells[0].len() {
-                let cell = self.cells[x][y];
-                let neighbors = self.count_neighbors(x as i32, y as i32);
-
-                next_cells[x][y] = matches!((cell, neighbors), (true, 2) | (true, 3) | (false, 3));
-            }
-        }
-        self.cells = next_cells;
     }
 
     /// Draws the grid lines for the Game of Life.
