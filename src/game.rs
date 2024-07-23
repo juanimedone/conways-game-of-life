@@ -1,8 +1,4 @@
-use macroquad::{
-    color::{BLACK, GRAY, WHITE},
-    shapes::{draw_line, draw_rectangle},
-    window::{clear_background, next_frame},
-};
+use macroquad::prelude::*;
 
 /// Represents the state of the Game of Life.
 pub struct Game {
@@ -15,8 +11,8 @@ impl Game {
     ///
     /// The function will adjust the number of rows and columns based on the given
     /// `cell_size` and will initialize the cells with random boolean values.
-    /// 
-    /// # Arguments 
+    ///
+    /// # Arguments
     ///
     /// * `height` - The height of the game grid.
     /// * `width` - The width of the game grid.
@@ -32,12 +28,9 @@ impl Game {
         let nrows = height / cell_size;
         let ncols = width / cell_size;
         let cells = (0..ncols)
-            .map(|_| (0..nrows).map(|_| rand::random()).collect())
+            .map(|_| (0..nrows).map(|_| ::rand::random()).collect())
             .collect();
-        Ok(Self {
-            cell_size,
-            cells,
-        })
+        Ok(Self { cell_size, cells })
     }
 
     /// Validates the start parameters for the game.
@@ -51,7 +44,7 @@ impl Game {
     /// # Returns
     ///
     /// `Ok(())` if the parameters are valid, otherwise an error message.
-    /// 
+    ///
     /// # Errors
     ///
     /// This function will return an error if `height`, `width` or `cell_size` is 0
@@ -66,18 +59,95 @@ impl Game {
         Ok(())
     }
 
+    /// Displays the start menu.
+    ///
+    /// This function shows the start menu with instructions to start the game,
+    /// pause the game, and change the game speed.
+    async fn show_menu(&self) {
+        let mut show_menu = true;
+
+        while show_menu {
+            clear_background(BLACK);
+            draw_text(
+                "Conway's Game of Life",
+                screen_width() / 2.0 - 150.0,
+                screen_height() / 2.0 - 20.0,
+                30.0,
+                WHITE,
+            );
+            draw_text(
+                "Press Enter to Start",
+                screen_width() / 2.0 - 100.0,
+                screen_height() / 2.0 + 20.0,
+                20.0,
+                GRAY,
+            );
+            draw_text(
+                "Press Space to Pause",
+                screen_width() / 2.0 - 100.0,
+                screen_height() / 2.0 + 50.0,
+                20.0,
+                GRAY,
+            );
+            draw_text(
+                "Press Up/Down arrows to Change Speed",
+                screen_width() / 2.0 - 160.0,
+                screen_height() / 2.0 + 80.0,
+                20.0,
+                GRAY,
+            );
+            next_frame().await;
+
+            if is_key_pressed(KeyCode::Enter) {
+                show_menu = false;
+            }
+        }
+    }
+
     /// Starts the Game of Life.
     ///
-    /// This function enters an infinite loop to continuously update and draw the game state.
+    /// This function displays the start menu and then enters an infinite loop to continuously
+    /// update and draw the game state. The game can be paused and unpaused by pressing the
+    /// Space key. The game speed can be increased by pressing the Up arrow key and decreased
+    /// by pressing the Down arrow key.
+    ///
+    /// The main loop performs the following actions:
+    /// - Checks for key presses to pause/unpause the game and adjust the game speed.
+    /// - Updates the game state if the game is not paused.
+    /// - Draws the game grid and cells.
+    /// - Waits for the next frame to be drawn.
+    ///
+    /// The game speed controls how frequently the game state updates. The `speed` variable is
+    /// multiplied or divided by 1.5 when the Up or Down arrow keys are pressed, respectively.
     pub async fn start(&mut self) {
-        loop {
-            clear_background(BLACK);
+        self.show_menu().await;
 
-            self.update();
+        let mut paused = false;
+        let mut speed = 10.0;
+        let mut update_timer = 0.0;
+        loop {
+            if is_key_pressed(KeyCode::Space) {
+                paused = !paused;
+            }
+            if is_key_pressed(KeyCode::Up) {
+                speed *= 1.5;
+            }
+            if is_key_pressed(KeyCode::Down) {
+                speed /= 1.5;
+            }
+
+            if !paused {
+                update_timer += get_frame_time();
+                if update_timer >= 1.0 / speed {
+                    self.update();
+                    update_timer = 0.0;
+                }
+            }
+
+            clear_background(BLACK);
             self.draw_grid();
             self.draw_cells();
-
-            next_frame().await
+            next_frame().await;
         }
     }
 
@@ -121,7 +191,7 @@ impl Game {
         let nrows = self.cells.len();
         let ncols = self.cells[0].len();
         let mut next_cells = vec![vec![false; ncols]; nrows];
-        
+
         for x in 0..next_cells.len() {
             for y in 0..next_cells[0].len() {
                 let cell = self.cells[x][y];
@@ -171,7 +241,6 @@ impl Game {
             }
         }
     }
-
 }
 
 #[cfg(test)]
