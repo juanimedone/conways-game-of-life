@@ -18,9 +18,9 @@ impl Game {
     ///
     /// # Arguments
     ///
-    /// * `height` - The height of the game grid.
-    /// * `width` - The width of the game grid.
-    /// * `cell_size` - The size of each cell.
+    /// * `height` - The height of the game grid in pixels.
+    /// * `width` - The width of the game grid in pixels.
+    /// * `cell_size` - The size of each cell in pixels.
     ///
     /// # Returns
     ///
@@ -44,9 +44,9 @@ impl Game {
     ///
     /// # Arguments
     ///
-    /// * `height` - The height of the game grid.
-    /// * `width` - The width of the game grid.
-    /// * `cell_size` - The size of each cell.
+    /// * `height` - The height of the game grid in pixels.
+    /// * `width` - The width of the game grid in pixels.
+    /// * `cell_size` - The size of each cell in pixels.
     ///
     /// # Returns
     ///
