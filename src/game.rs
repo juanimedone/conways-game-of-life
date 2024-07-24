@@ -1,4 +1,4 @@
-use macroquad::prelude::*;
+use macroquad::{prelude::*, ui::root_ui};
 
 const DEFAULT_SPEED: f32 = 10.0;
 
@@ -68,29 +68,32 @@ impl Game {
 
     /// Runs the Game of Life.
     ///
-    /// This function displays the start menu, allows the player to choose the initial
-    /// state of the cells, and then enters an infinite loop to continuously update
-    /// and draw the game state. The game can be paused and unpaused by pressing the
-    /// Space key. The game speed can be increased by pressing the Up arrow key and
-    /// decreased by pressing the Down arrow key.
+    /// This function manages the game's lifecycle, including displaying the start menu,
+    /// allowing the player to choose the initial state of the cells, and continuously updating
+    /// and rendering the game state. The game can be paused or unpaused by pressing the Space
+    /// key, and the game speed can be adjusted using the Up and Down arrow keys.
     ///
-    /// The main loop performs the following actions:
-    /// - Checks for key presses to pause/unpause the game and adjust the game speed.
+    /// The `run` function performs the following actions in its main loop:
+    /// - Checks for key presses to pause/unpause the game, adjust the game speed or show the menu.
     /// - Updates the game state if the game is not paused.
     /// - Draws the game grid and cells.
-    /// - Waits for the next frame to be drawn.
+    /// - Displays the menu when requested and handles restarting the game if necessary.
+    /// - Waits for the next frame to be drawn, allowing for smooth animation.
     ///
-    /// The game speed controls how frequently the game state updates. The `speed` variable is
-    /// multiplied or divided by 1.5 when the Up or Down arrow keys are pressed, respectively.
+    /// The game speed controls the frequency of state updates. The `speed` variable is
+    /// adjusted by multiplying or dividing it by 1.5 when the Up or Down arrow keys are pressed,
+    /// respectively. The update timer ensures the game state updates according to the current speed.
     pub async fn run(&mut self) {
-        self.show_menu().await;
+        self.show_start_menu().await;
         self.choose_initial_state().await;
 
         let mut paused = false;
+        let mut show_menu = false;
+        let mut restart = false;
         let mut speed = DEFAULT_SPEED;
         let mut update_timer = 0.0;
         loop {
-            Self::check_keys(&mut paused, &mut speed);
+            self.check_keys(&mut paused, &mut speed, &mut show_menu);
 
             if !paused {
                 update_timer += get_frame_time();
@@ -98,6 +101,15 @@ impl Game {
                     self.update();
                     update_timer = 0.0;
                 }
+            }
+            if show_menu {
+                self.draw_menu(&mut paused, &mut restart).await;
+            }
+            if restart {
+                self.restart().await;
+                paused = false;
+                show_menu = false;
+                restart = false;
             }
 
             clear_background(BLACK);
@@ -107,11 +119,12 @@ impl Game {
         }
     }
 
-    /// Displays the start menu.
+    /// Displays the start menu for the game.
     ///
-    /// This function shows the start menu with instructions to start the game,
-    /// pause the game, and change the game speed.
-    async fn show_menu(&self) {
+    /// This function renders the start menu on the screen with instructions for opening and closing the menu,
+    /// pausing the game and changing the game speed. It continuously displays
+    /// the menu until the player presses the Enter key to start the game.
+    async fn show_start_menu(&self) {
         let mut show_menu = true;
 
         while show_menu {
@@ -124,25 +137,32 @@ impl Game {
                 WHITE,
             );
             draw_text(
-                "Press Enter to Start",
-                screen_width() / 2.0 - 100.0,
+                "Press M to open and close the menu",
+                screen_width() / 2.0 - 140.0,
                 screen_height() / 2.0 + 20.0,
                 20.0,
                 GRAY,
             );
             draw_text(
-                "Press Space to Pause",
+                "Press Space to pause",
                 screen_width() / 2.0 - 100.0,
                 screen_height() / 2.0 + 50.0,
                 20.0,
                 GRAY,
             );
             draw_text(
-                "Press Up/Down arrows to Change Speed",
+                "Press Up/Down arrows to change speed",
                 screen_width() / 2.0 - 160.0,
                 screen_height() / 2.0 + 80.0,
                 20.0,
                 GRAY,
+            );
+            draw_text(
+                "Press Enter to start",
+                screen_width() / 2.0 - 100.0,
+                screen_height() / 2.0 + 140.0,
+                20.0,
+                WHITE,
             );
             next_frame().await;
 
@@ -217,15 +237,14 @@ impl Game {
             .collect();
     }
 
-    /// Checks for key presses to pause/unpause the game and adjust the game speed.
-    ///
-    /// This function handles key presses for pausing the game and changing the game speed.
+    /// Checks for key presses to pause/unpause the game, adjust the speed and show the menu.
     ///
     /// # Arguments
     ///
-    /// * `paused` - A mutable reference to the paused (or not paused) state of the game.
-    /// * `speed` - A mutable reference to the speed of the game.
-    fn check_keys(paused: &mut bool, speed: &mut f32) {
+    /// * `paused` - A mutable reference to a boolean that indicates whether the game is paused.
+    /// * `speed` - A mutable reference to a float representing the current game speed.
+    /// * `show_menu` - A mutable reference to a boolean that controls the visibility of the menu.
+    fn check_keys(&mut self, paused: &mut bool, speed: &mut f32, show_menu: &mut bool) {
         if is_key_pressed(KeyCode::Space) {
             *paused = !*paused;
         }
@@ -234,6 +253,9 @@ impl Game {
         }
         if is_key_pressed(KeyCode::Down) {
             *speed = (*speed / 1.5).max(0.1);
+        }
+        if is_key_pressed(KeyCode::M) {
+            *show_menu = !*show_menu;
         }
     }
 
@@ -328,6 +350,45 @@ impl Game {
                 }
             }
         }
+    }
+
+    /// Draws the game menu with options for restarting and pausing/unpausing the game.
+    ///
+    /// # Arguments
+    ///
+    /// * `paused` - A mutable reference to a boolean that indicates whether the game is currently paused.
+    /// * `restart` - A mutable reference to a boolean that is set to `true` when the "Restart Game" button is pressed.
+    async fn draw_menu(&mut self, paused: &mut bool, restart: &mut bool) {
+        let menu_height = 200.0;
+        let menu_width = 250.0;
+        let menu_x = (screen_width() - menu_width) / 2.0;
+        let menu_y = (screen_height() - menu_height) / 2.0;
+
+        root_ui().window(
+            1,
+            vec2(menu_x, menu_y),
+            vec2(menu_width, menu_height),
+            |ui| {
+                ui.label(None, "Game Menu");
+                ui.separator();
+                if ui.button(None, "Restart Game") {
+                    *restart = true;
+                }
+                if ui.button(None, if *paused { "Unpause" } else { "Pause" }) {
+                    *paused = !*paused;
+                }
+                ui.label(None, "Press 'M' to close the menu");
+            },
+        );
+    }
+
+    /// Resets the game state and restarts the game.
+    ///
+    /// This function clears the current state of the cells, effectively resetting the game board
+    /// to its initial empty state. It then prompts the user to choose a new initial state for the cells.
+    async fn restart(&mut self) {
+        self.cells = vec![vec![false; self.nrows]; self.ncols];
+        self.choose_initial_state().await;
     }
 }
 
