@@ -3,8 +3,8 @@ use macroquad::window::*;
 use std::num::NonZeroUsize;
 
 const CELL_SIZE: usize = 20;
-const WINDOW_HEIGHT: i32 = 600;
-const WINDOW_WIDTH: i32 = 800;
+const NROWS: usize = 30;
+const NCOLS: usize = 40;
 
 /// Window configuration for Macroquad.
 ///
@@ -12,27 +12,27 @@ const WINDOW_WIDTH: i32 = 800;
 ///
 /// # Returns
 ///
-/// * `Conf` - The configuration struct with the specified title, width, and height.
+/// * `Conf` - The configuration struct with the specified title, height and width.
 fn window_conf() -> Conf {
     Conf {
         window_title: "Conway's Game of Life".to_string(),
-        window_height: WINDOW_HEIGHT,
-        window_width: WINDOW_WIDTH,
+        window_height: (NROWS * CELL_SIZE) as i32,
+        window_width: (NCOLS * CELL_SIZE) as i32,
         ..Default::default()
     }
 }
 
 /// The entry point of the Conway's Game of Life.
 ///
-/// This function initializes the game with the specified cell size and the window dimensions.
+/// This function initializes the game with the specified cell size and dimensions.
 /// It uses `NonZeroUsize` to ensure that the dimensions and cell size are non-zero.
 /// If any of the parameters are invalid, it prints an error message.
 ///
 /// # Constants
 ///
 /// * `CELL_SIZE` - The size of each cell in pixels.
-/// * `WINDOW_HEIGHT` - The height of the game window in pixels.
-/// * `WINDOW_WIDTH` - The width of the game window in pixels.
+/// * `NROWS` - The number of rows in the game grid.
+/// * `NCOLS` - The number of columns in the game grid.
 ///
 /// # Usage
 ///
@@ -41,12 +41,12 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf)]
 async fn main() {
     match (
-        NonZeroUsize::new(screen_height() as usize),
-        NonZeroUsize::new(screen_width() as usize),
+        NonZeroUsize::new(NROWS),
+        NonZeroUsize::new(NCOLS),
         NonZeroUsize::new(CELL_SIZE),
     ) {
-        (Some(height), Some(width), Some(cell_size)) => {
-            let mut game = Game::new(height.get(), width.get(), cell_size.get());
+        (Some(nrows), Some(ncols), Some(cell_size)) => {
+            let mut game = Game::new(nrows.get(), ncols.get(), cell_size.get());
             game.run().await;
         }
         _ => {
