@@ -6,17 +6,18 @@ pub struct Game {
 }
 
 impl Game {
-    /// Creates a new Game of Life with all cells initially dead.
+    /// Creates a new `Game` instance with all cells initially dead.
+    ///
+    /// This function initializes a new `Game` with the given dimensions and prepares a grid where all cells are dead.
     ///
     /// # Arguments
     ///
-    /// * `board` - A `BoardRenderer` instance for rendering the game board.
     /// * `ncols` - The number of columns in the game grid.
     /// * `nrows` - The number of rows in the game grid.
     ///
     /// # Returns
     ///
-    /// A new `Game` instance with the specified board renderer, dimensions, and with all cells initially dead.
+    /// A new `Game` instance with the specified dimensions, and with all cells initially set to `false` (dead).
     pub fn new(ncols: usize, nrows: usize) -> Self {
         let cells = vec![vec![false; nrows]; ncols];
         Self {
@@ -26,10 +27,12 @@ impl Game {
         }
     }
 
-    /// Toggles the state of the cell at the mouse position.
+    /// This function changes the state of the cell at the given `(x, y)` coordinates from alive to dead or vice versa.
     ///
-    /// This function retrieves the mouse position and toggles the state of the cell
-    /// at that position from alive to dead or vice versa.
+    /// # Arguments
+    ///
+    /// * `x` - The column index of the cell to be toggled. It must be within the range `[0, ncols)`.
+    /// * `y` - The row index of the cell to be toggled. It must be within the range `[0, nrows)`.
     pub fn toggle_cell_state(&mut self, x: usize, y: usize) {
         if x < self.ncols && y < self.nrows {
             self.cells[x][y] = !self.cells[x][y];
