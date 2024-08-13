@@ -160,11 +160,13 @@ impl BoardRenderer {
         );
     }
 
-    /// Allows the player to choose the initial alive cells through a GUI.
+    /// Allows the player to choose the initial state of cells through a graphical interface.
     ///
-    /// This function allows the player to click on cells to toggle their state
-    /// (alive or dead) before starting the game. The player can also randomize
-    /// the initial state by pressing 'R'.
+    /// This asynchronous function provides an interactive GUI for players to set the initial state of cells in the game grid. Players can click on cells to toggle their state between alive and dead. Additionally, pressing the 'R' key will randomize the initial cell states.
+    ///
+    /// # Arguments
+    ///
+    /// * `game` - A mutable reference to a `Game` instance, which holds the current state of the cells. The function will modify this instance based on player interactions.
     async fn choose_initial_state(&mut self, game: &mut Game) {
         let mut choosing = true;
         
@@ -216,8 +218,11 @@ impl BoardRenderer {
     
     /// Resets the game state and restarts the game.
     ///
-    /// This function clears the current state of the cells, effectively resetting the game board
-    /// to its initial empty state. It then prompts the user to choose a new initial state for the cells.
+    /// This asynchronous function resets the game to its initial state and allows the player to choose a new initial state for the cells. It clears the current state of the cells, reinitializes the `Game` instance with a new empty board, and then invokes the `choose_initial_state` method to let the player set up the cells again.
+    ///
+    /// # Arguments
+    ///
+    /// * `game` - A mutable reference to a `Game` instance. This reference is updated to reflect the new game state after resetting.
     pub async fn restart(&mut self, game: &mut Game) {
         *game = Game::new(self.ncols, self.nrows);
         self.choose_initial_state(game).await;
@@ -240,6 +245,10 @@ impl BoardRenderer {
     /// The game speed controls the frequency of state updates. The `speed` variable is
     /// adjusted by multiplying or dividing it by 1.5 when the Up or Down arrow keys are pressed,
     /// respectively. The update timer ensures the game state updates according to the current speed.
+    /// 
+    /// # Arguments
+    ///
+    /// * `game` - A mutable reference to a `Game` instance that represents the current state of the game.
     pub async fn run(&mut self, game: &mut Game) {
         Self::show_start_menu().await;
         self.choose_initial_state(game).await;
