@@ -48,25 +48,6 @@ impl Game {
             .collect();
     }
 
-    /// Updates the game state to the next generation.
-    ///
-    /// This function calculates the next state of the game based on the current state
-    /// and updates the cells accordingly.
-    pub fn update(&mut self) {
-        let mut next_cells = vec![vec![false; self.nrows]; self.ncols];
-
-        #[allow(clippy::needless_range_loop)] // this way is clearer than how Clippy suggests
-        for x in 0..self.ncols {
-            for y in 0..self.nrows {
-                let cell = self.cells[x][y];
-                let neighbors = self.count_neighbors(x as i32, y as i32);
-
-                next_cells[x][y] = matches!((cell, neighbors), (true, 2) | (true, 3) | (false, 3));
-            }
-        }
-        self.cells = next_cells;
-    }
-
     /// Counts the number of alive neighbors for the given cell.
     ///
     /// # Arguments
@@ -100,6 +81,25 @@ impl Game {
             }
         }
         count
+    }
+
+    /// Updates the game state to the next generation.
+    ///
+    /// This function calculates the next state of the game based on the current state
+    /// and updates the cells accordingly.
+    pub fn update(&mut self) {
+        let mut next_cells = vec![vec![false; self.nrows]; self.ncols];
+
+        #[allow(clippy::needless_range_loop)] // this way is clearer than how Clippy suggests
+        for x in 0..self.ncols {
+            for y in 0..self.nrows {
+                let cell = self.cells[x][y];
+                let neighbors = self.count_neighbors(x as i32, y as i32);
+
+                next_cells[x][y] = matches!((cell, neighbors), (true, 2) | (true, 3) | (false, 3));
+            }
+        }
+        self.cells = next_cells;
     }
 }
 

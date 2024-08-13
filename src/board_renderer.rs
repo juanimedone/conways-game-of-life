@@ -160,6 +160,69 @@ impl BoardRenderer {
         );
     }
 
+    /// Allows the player to choose the initial alive cells through a GUI.
+    ///
+    /// This function allows the player to click on cells to toggle their state
+    /// (alive or dead) before starting the game. The player can also randomize
+    /// the initial state by pressing 'R'.
+    async fn choose_initial_state(&mut self, game: &mut Game) {
+        let mut choosing = true;
+        
+        while choosing {
+            clear_background(BLACK);
+            self.draw_grid();
+            self.draw_cells(&game.cells);
+            
+            if is_mouse_button_pressed(MouseButton::Left) {
+                let mouse_pos = mouse_position();
+                let x = (mouse_pos.0 / self.cell_size as f32) as usize;
+                let y = (mouse_pos.1 / self.cell_size as f32) as usize;
+                game.toggle_cell_state(x, y);
+            }
+            if is_key_pressed(KeyCode::R) {
+                game.randomize();
+            }
+            
+            Self::show_initial_instructions();
+            next_frame().await;
+            
+            if is_key_pressed(KeyCode::Enter) {
+                choosing = false;
+            }
+        }
+    }
+    
+    /// Checks for key presses to pause/unpause the game, adjust the speed and show the menu.
+    ///
+    /// # Arguments
+    ///
+    /// * `paused` - A mutable reference to a boolean that indicates whether the game is paused.
+    /// * `speed` - A mutable reference to a float representing the current game speed.
+    /// * `show_menu` - A mutable reference to a boolean that controls the visibility of the menu.
+    fn check_keys(&mut self, paused: &mut bool, speed: &mut f32, show_menu: &mut bool) {
+        if is_key_pressed(KeyCode::Space) {
+            *paused = !*paused;
+        }
+        if is_key_pressed(KeyCode::Up) {
+            *speed = (*speed * 1.5).min(1000.0);
+        }
+        if is_key_pressed(KeyCode::Down) {
+            *speed = (*speed / 1.5).max(0.1);
+        }
+        if is_key_pressed(KeyCode::M) {
+            *show_menu = !*show_menu;
+        }
+    }
+    
+    /// Resets the game state and restarts the game.
+    ///
+    /// This function clears the current state of the cells, effectively resetting the game board
+    /// to its initial empty state. It then prompts the user to choose a new initial state for the cells.
+    pub async fn restart(&mut self, game: &mut Game) {
+        *game = Game::new(self.ncols, self.nrows);
+        self.choose_initial_state(game).await;
+    }
+    
     /// Runs the Game of Life.
     ///
     /// This function manages the game's lifecycle, including displaying the start menu,
@@ -211,68 +274,5 @@ impl BoardRenderer {
             self.draw_cells(&game.cells);
             next_frame().await;
         }
-    }
-
-    /// Allows the player to choose the initial alive cells through a GUI.
-    ///
-    /// This function allows the player to click on cells to toggle their state
-    /// (alive or dead) before starting the game. The player can also randomize
-    /// the initial state by pressing 'R'.
-    async fn choose_initial_state(&mut self, game: &mut Game) {
-        let mut choosing = true;
-
-        while choosing {
-            clear_background(BLACK);
-            self.draw_grid();
-            self.draw_cells(&game.cells);
-
-            if is_mouse_button_pressed(MouseButton::Left) {
-                let mouse_pos = mouse_position();
-                let x = (mouse_pos.0 / self.cell_size as f32) as usize;
-                let y = (mouse_pos.1 / self.cell_size as f32) as usize;
-                game.toggle_cell_state(x, y);
-            }
-            if is_key_pressed(KeyCode::R) {
-                game.randomize();
-            }
-
-            Self::show_initial_instructions();
-            next_frame().await;
-
-            if is_key_pressed(KeyCode::Enter) {
-                choosing = false;
-            }
-        }
-    }
-
-    /// Checks for key presses to pause/unpause the game, adjust the speed and show the menu.
-    ///
-    /// # Arguments
-    ///
-    /// * `paused` - A mutable reference to a boolean that indicates whether the game is paused.
-    /// * `speed` - A mutable reference to a float representing the current game speed.
-    /// * `show_menu` - A mutable reference to a boolean that controls the visibility of the menu.
-    fn check_keys(&mut self, paused: &mut bool, speed: &mut f32, show_menu: &mut bool) {
-        if is_key_pressed(KeyCode::Space) {
-            *paused = !*paused;
-        }
-        if is_key_pressed(KeyCode::Up) {
-            *speed = (*speed * 1.5).min(1000.0);
-        }
-        if is_key_pressed(KeyCode::Down) {
-            *speed = (*speed / 1.5).max(0.1);
-        }
-        if is_key_pressed(KeyCode::M) {
-            *show_menu = !*show_menu;
-        }
-    }
-
-    /// Resets the game state and restarts the game.
-    ///
-    /// This function clears the current state of the cells, effectively resetting the game board
-    /// to its initial empty state. It then prompts the user to choose a new initial state for the cells.
-    pub async fn restart(&mut self, game: &mut Game) {
-        *game = Game::new(self.ncols, self.nrows);
-        self.choose_initial_state(game).await;
     }
 }
