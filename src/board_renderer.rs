@@ -1,10 +1,13 @@
+use crate::game::Game;
 use macroquad::{prelude::*, ui::root_ui};
+
+const DEFAULT_SPEED: f32 = 10.0;
 
 /// Responsible for rendering the game board and handling UI elements.
 pub struct BoardRenderer {
-    pub(crate) ncols: usize,
-    pub(crate) nrows: usize,
-    pub(crate) cell_size: usize,
+    pub ncols: usize,
+    pub nrows: usize,
+    pub cell_size: usize,
 }
 
 impl BoardRenderer {
@@ -13,7 +16,7 @@ impl BoardRenderer {
     /// This function renders the start menu on the screen with instructions for opening and closing the menu,
     /// pausing the game and changing the game speed. It continuously displays
     /// the menu until the player presses the Enter key to start the game.
-    pub async fn show_start_menu() {
+    async fn show_start_menu() {
         let mut show_menu = true;
 
         while show_menu {
@@ -155,5 +158,130 @@ impl BoardRenderer {
                 ui.label(None, "Press 'M' to close the menu");
             },
         );
+    }
+
+    /// Allows the player to choose the initial state of cells through a graphical interface.
+    ///
+    /// This asynchronous function provides an interactive GUI for players to set the initial state of cells in the game grid. Players can click on cells to toggle their state between alive and dead. Additionally, pressing the 'R' key will randomize the initial cell states.
+    ///
+    /// # Arguments
+    ///
+    /// * `game` - A mutable reference to a `Game` instance, which holds the current state of the cells. The function will modify this instance based on player interactions.
+    async fn choose_initial_state(&mut self, game: &mut Game) {
+        let mut choosing = true;
+        
+        while choosing {
+            clear_background(BLACK);
+            self.draw_grid();
+            self.draw_cells(&game.cells);
+            
+            if is_mouse_button_pressed(MouseButton::Left) {
+                let mouse_pos = mouse_position();
+                let x = (mouse_pos.0 / self.cell_size as f32) as usize;
+                let y = (mouse_pos.1 / self.cell_size as f32) as usize;
+                game.toggle_cell_state(x, y);
+            }
+            if is_key_pressed(KeyCode::R) {
+                game.randomize();
+            }
+            
+            Self::show_initial_instructions();
+            next_frame().await;
+            
+            if is_key_pressed(KeyCode::Enter) {
+                choosing = false;
+            }
+        }
+    }
+    
+    /// Checks for key presses to pause/unpause the game, adjust the speed and show the menu.
+    ///
+    /// # Arguments
+    ///
+    /// * `paused` - A mutable reference to a boolean that indicates whether the game is paused.
+    /// * `speed` - A mutable reference to a float representing the current game speed.
+    /// * `show_menu` - A mutable reference to a boolean that controls the visibility of the menu.
+    fn check_keys(&mut self, paused: &mut bool, speed: &mut f32, show_menu: &mut bool) {
+        if is_key_pressed(KeyCode::Space) {
+            *paused = !*paused;
+        }
+        if is_key_pressed(KeyCode::Up) {
+            *speed = (*speed * 1.5).min(1000.0);
+        }
+        if is_key_pressed(KeyCode::Down) {
+            *speed = (*speed / 1.5).max(0.1);
+        }
+        if is_key_pressed(KeyCode::M) {
+            *show_menu = !*show_menu;
+        }
+    }
+    
+    /// Resets the game state and restarts the game.
+    ///
+    /// This asynchronous function resets the game to its initial state and allows the player to choose a new initial state for the cells. It clears the current state of the cells, reinitializes the `Game` instance with a new empty board, and then invokes the `choose_initial_state` method to let the player set up the cells again.
+    ///
+    /// # Arguments
+    ///
+    /// * `game` - A mutable reference to a `Game` instance. This reference is updated to reflect the new game state after resetting.
+    pub async fn restart(&mut self, game: &mut Game) {
+        *game = Game::new(self.ncols, self.nrows);
+        self.choose_initial_state(game).await;
+    }
+    
+    /// Runs the Game of Life.
+    ///
+    /// This function manages the game's lifecycle, including displaying the start menu,
+    /// allowing the player to choose the initial state of the cells, and continuously updating
+    /// and rendering the game state. The game can be paused or unpaused by pressing the Space
+    /// key, and the game speed can be adjusted using the Up and Down arrow keys.
+    ///
+    /// The `run` function performs the following actions in its main loop:
+    /// - Checks for key presses to pause/unpause the game, adjust the game speed or show the menu.
+    /// - Updates the game state if the game is not paused.
+    /// - Draws the game grid and cells.
+    /// - Displays the menu when requested and handles restarting the game if necessary.
+    /// - Waits for the next frame to be drawn, allowing for smooth animation.
+    ///
+    /// The game speed controls the frequency of state updates. The `speed` variable is
+    /// adjusted by multiplying or dividing it by 1.5 when the Up or Down arrow keys are pressed,
+    /// respectively. The update timer ensures the game state updates according to the current speed.
+    /// 
+    /// # Arguments
+    ///
+    /// * `game` - A mutable reference to a `Game` instance that represents the current state of the game.
+    pub async fn run(&mut self, game: &mut Game) {
+        Self::show_start_menu().await;
+        self.choose_initial_state(game).await;
+
+        let mut paused = false;
+        let mut show_menu = false;
+        let mut restart = false;
+        let mut speed = DEFAULT_SPEED;
+        let mut update_timer = 0.0;
+        loop {
+            self.check_keys(&mut paused, &mut speed, &mut show_menu);
+
+            if !paused {
+                update_timer += get_frame_time();
+                if update_timer >= 1.0 / speed {
+                    game.update();
+                    update_timer = 0.0;
+                }
+            }
+            if show_menu {
+                Self::draw_menu(&mut paused, &mut restart).await;
+            }
+            if restart {
+                self.restart(game).await;
+                paused = false;
+                show_menu = false;
+                restart = false;
+            }
+
+            clear_background(BLACK);
+            self.draw_grid();
+            self.draw_cells(&game.cells);
+            next_frame().await;
+        }
     }
 }

@@ -1,4 +1,4 @@
-use conways_game_of_life::game::Game;
+use conways_game_of_life::{board_renderer::BoardRenderer, game::Game};
 use macroquad::window::*;
 use std::num::NonZeroUsize;
 
@@ -37,7 +37,7 @@ fn window_conf() -> Conf {
 /// # Usage
 ///
 /// This function uses the `#[macroquad::main(window_conf)]` attribute to set the window configuration.
-/// It then creates a new game instance and runs it asynchronously.
+/// It then creates a new game instance with a board and runs it asynchronously.
 #[macroquad::main(window_conf)]
 async fn main() {
     match (
@@ -46,8 +46,13 @@ async fn main() {
         NonZeroUsize::new(CELL_SIZE),
     ) {
         (Some(nrows), Some(ncols), Some(cell_size)) => {
-            let mut game = Game::new(nrows.get(), ncols.get(), cell_size.get());
-            game.run().await;
+            let mut board = BoardRenderer {
+                ncols: ncols.get(),
+                nrows: nrows.get(),
+                cell_size: cell_size.get(),
+            };
+            let mut game = Game::new(ncols.get(), nrows.get());
+            board.run(&mut game).await;
         }
         _ => {
             println!("Error: Invalid dimensions or cell size");
